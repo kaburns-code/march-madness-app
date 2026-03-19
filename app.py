@@ -95,12 +95,13 @@ if team_a_name and team_b_name:
         if underdog:
             st.info(f"**Upset Watch:** {underdog} has a **{u_prob * 100:.1f}%** chance of pulling off the upset.")
 
-        # Injury Warning (Yellow Box)
+# Injury Warning (Yellow Box)
         matchup_injuries = injuries_df[injuries_df['Team'].isin([team_a_name, team_b_name])]
         if not matchup_injuries.empty:
             st.warning("⚠️ **Injury Impact Detected:** Win probabilities have been adjusted based on player availability.")
             with st.expander("🔍 View Scouting & Injury Report"):
-                st.table(matchup_injuries[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value']]))
+                # Fixed: Removed the extra closing parenthesis at the end
+                st.table(matchup_injuries[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value']])
 
         # --- 6. The Simulation Button ---
         if st.button("🎲 Simulate Game Result", use_container_width=True):
