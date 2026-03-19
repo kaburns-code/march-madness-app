@@ -28,11 +28,10 @@ st.write("Select two teams to calculate win probabilities and upset potential!")
 col1, col2 = st.columns(2)
 
 with col1:
-    # Assuming your CSV has a 'Team' column. Change 'Team' if it's named differently!
-    team_a_name = st.selectbox("Select Team A", df['Team'].sort_values())
+    team_a_name = st.selectbox("Select Team A", df['Team'].sort_values(), key='team_a')
 
 with col2:
-    team_b_name = st.selectbox("Select Team B", df['Team'].sort_values(), index=1)
+    team_b_name = st.selectbox("Select Team B", df['Team'].sort_values(), key='team_b')
 
 # --- 3. The Prediction Logic ---
 if team_a_name and team_b_name:
