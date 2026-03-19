@@ -113,17 +113,17 @@ if team_a_name and team_b_name:
 if underdog != "Neither (Same Seed)":
             st.info(f"**Upset Watch:** {underdog} has a **{upset_chance * 100:.1f}%** chance of pulling off the upset.")
             
-            # Figure out how much the modifier specifically helped or hurt the underdog
             underdog_modifier = modifier if underdog == team_a_name else -modifier
             
-            # Show the user exactly what the upset logic did!
             if underdog_modifier > 0:
                 st.caption(f"🚨 *Upset logic boosted {underdog}'s chances by **{underdog_modifier * 100:.1f}%** because they are playing better than their seed!*")
             elif underdog_modifier < 0:
                 st.caption(f"📉 *Upset logic actually penalized {underdog} by **{abs(underdog_modifier) * 100:.1f}%** because they are over-seeded.*")
-            else:
+        else:
                 st.caption("⚖️ *Seeding aligns perfectly with expected performance. No upset modifier applied.*")
-else:
+        
+        # THIS is the line causing the error!
+        else:
             st.info("Even matchup based on seeding. No technical upset possible.")
             
         # Show the stats so you can verify the math is working as expected
