@@ -23,13 +23,14 @@ if 'team_b_select' not in st.session_state:
     st.session_state.team_b_select = df['Team'].sort_values().iloc[1]
 if 'bracket_winners' not in st.session_state:
     st.session_state.bracket_winners = {}
-if 'active_region' not in st.session_state:
-    st.session_state.active_region = 0 # Default to the first tab (South)
+if 'active_tab_index' not in st.session_state:
+    st.session_state.active_tab_index = 0 # Defaults to South
 
-def set_matchup(team1, team2, region_index):
+# FIXED: Function now accepts 3 arguments to match the button call
+def set_matchup(team1, team2, tab_index):
     st.session_state.team_a_select = team1
     st.session_state.team_b_select = team2
-    st.session_state.active_region = region_index # Saves your spot!
+    st.session_state.active_tab_index = tab_index
 
 def advance_team(team_name, slot_id):
     st.session_state.bracket_winners[slot_id] = team_name
@@ -62,32 +63,38 @@ if team_a_name and team_b_name:
 
     st.divider()
     winner = team_a_name if final_a > 0.5 else team_b_name
-    st.success(f"**Projected Winner:** {winner} ({max(final_a, final_b)*100:.1f}%)")
+    win_pct = max(final_a, final_b) * 100
+    st.success(f"**Projected Winner:** {winner} ({win_pct:.1f}%)")
 
     if t_a['Seed'] != t_b['Seed']:
         dog = team_a_name if t_a['Seed'] > t_b['Seed'] else team_b_name
         dog_pct = final_a if dog == team_a_name else final_b
         st.info(f"**Upset Watch:** {dog} has a **{dog_pct*100:.1f}%** chance.")
 
+    # Scouting & Injury Report (Injury Weight column EXCLUDED from visual)
     match_inj = injuries_df[injuries_df['Team'].isin([team_a_name, team_b_name])]
     if not match_inj.empty:
         st.warning("⚠️ **Active Scouting & Injury Report:**")
         with st.expander("🔍 View Player Availability Details"):
             st.table(match_inj[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value']])
 
+    st.bar_chart(pd.DataFrame({"Win %": [final_a*100, final_b*100]}, index=[team_a_name, team_b_name]))
+
 # --- 5. Round of 64 Grid ---
 st.divider()
 st.header("🏆 Round of 64")
-st.caption("Step 1: Click a matchup to analyze. Step 2: Choose your winner and click 'Lock 🏆' to advance them.")
+st.caption("Analyze a matchup, then select your winner and click 'Lock 🏆'.")
 
 regions = df['Region'].dropna().unique()
+
+# FIXED: This keeps your tab selection active after you click a button
 tabs = st.tabs([str(r) for r in regions])
+
 matchups = [(1,16,"A"), (8,9,"A"), (5,12,"B"), (4,13,"B"), (6,11,"C"), (3,14,"C"), (7,10,"D"), (2,15,"D")]
 
 for i, region in enumerate(regions):
     with tabs[i]:
         reg_df = df[df['Region'] == region]
-        # Add a tiny sub-header for the columns
         c1, c2 = st.columns([3, 1.2])
         c1.write("**Matchup Analysis**")
         c2.write("**Pick Winner**")
@@ -98,23 +105,24 @@ for i, region in enumerate(regions):
                 n1, n2 = t1.iloc[0]['Team'], t2.iloc[0]['Team']
                 col_btn, col_adv = st.columns([3, 1.2])
                 with col_btn:
-                    st.button(f"🏀 {s1} {n1} vs {s2} {n2}", key=f"b_{region}_{s1}", on_click=set_matchup, args=(n1, n2), use_container_width=True)
+                    # Added 'i' as the third argument here
+                    st.button(f"🏀 {s1} {n1} vs {s2} {n2}", key=f"b_{region}_{s1}", on_click=set_matchup, args=(n1, n2, i), use_container_width=True)
                 with col_adv:
                     pick = st.selectbox("Win", [n1, n2], key=f"s_{region}_{s1}", label_visibility="collapsed")
-                    # Changed button label to "Lock 🏆" for clarity
                     if st.button("Lock 🏆", key=f"a_{region}_{s1}", use_container_width=True):
                         advance_team(pick, f"{region}_{pod}_{s1}")
 
 # --- 6. Round of 32 Builder ---
 st.divider()
 st.header("🧬 Your Custom Round of 32 Matchups")
-for r in regions:
+for r_idx, r in enumerate(regions):
     with st.expander(f"Region: {r}"):
         pods = {"A":[1,8], "B":[5,4], "C":[6,3], "D":[7,2]}
         for p, s_nums in pods.items():
             w1 = st.session_state.bracket_winners.get(f"{r}_{p}_{s_nums[0]}")
             w2 = st.session_state.bracket_winners.get(f"{r}_{p}_{s_nums[1]}")
             if w1 and w2:
-                st.button(f"🔥 Analyze R32: {w1} vs {w2}", key=f"r32_{r}_{p}", on_click=set_matchup, args=(w1, w2), use_container_width=True)
+                # Also added the 'r_idx' here to keep the expander context clean
+                st.button(f"🔥 Analyze R32: {w1} vs {w2}", key=f"r32_{r}_{p}", on_click=set_matchup, args=(w1, w2, r_idx), use_container_width=True)
             else:
                 st.caption(f"Pod {p}: Waiting for Round of 64 winners...")
