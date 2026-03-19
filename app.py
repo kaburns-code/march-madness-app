@@ -80,13 +80,13 @@ if team_a_name and team_b_name:
         # --- 5. Display Results ---
         st.divider()
         
-        # Dynamic Injury Report
+       # Dynamic Injury Report
         matchup_injuries = injuries_df[injuries_df['Team'].isin([team_a_name, team_b_name])]
         if not matchup_injuries.empty:
             st.warning("⚠️ **Injury Impact Detected:** Win probabilities have been adjusted.")
             with st.expander("🔍 View Scouting & Injury Report"):
-                # Showing your new 'Position' and 'Injury' columns
-                st.table(matchup_injuries[['Player', 'Team', 'Position', 'Injury', 'Status', 'Value']])
+                # Updated to use 'Pos' instead of 'Position' to match your CSV
+                st.table(matchup_injuries[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value']])
 
         predicted_winner = team_a_name if final_prob_a > 0.5 else team_b_name
         win_p = final_prob_a if predicted_winner == team_a_name else final_prob_b
