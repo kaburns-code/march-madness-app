@@ -5,6 +5,7 @@ import pandas as pd
 @st.cache_data
 def load_data():
     df = pd.read_csv('data.csv')
+    df['R32'] = df['R32'] / 100
     return df
 
 df = load_data()
