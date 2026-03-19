@@ -1,20 +1,19 @@
 import streamlit as st
 import pandas as pd
 import streamlit.components.v1 as components
+import random
 
 # --- 1. Load the Data ---
 @st.cache_data
 def load_data():
     df = pd.read_csv('data.csv')
     df['R32'] = df['R32'] / 100
-    
     try:
-        # Pulling from your new injuries.csv
+        # Pulling from your injuries.csv
         inj_df = pd.read_csv('injuries.csv')
     except:
-        # Fallback if file isn't found
-        inj_df = pd.DataFrame(columns=['Player', 'Team', 'Position', 'Injury', 'Status', 'Value', 'Injury Weight'])
-    
+        # Fallback empty dataframe
+        inj_df = pd.DataFrame(columns=['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value', 'Injury Weight'])
     return df, inj_df
 
 df, injuries_df = load_data()
@@ -39,7 +38,7 @@ if st.session_state.scroll_to_top:
 
 # --- 3. UI Selectors ---
 st.title("🏀 March Madness Upset Predictor")
-st.write("Analyze matchups with live **Injury Impact** layering.")
+st.write("Analyze matchups with **Seeding Logic** and **Real-Time Injury Reports**.")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -64,36 +63,57 @@ if team_a_name and team_b_name:
         exp_b = (17 - team_b['Seed']) / 16
         modifier = ((team_a['R32'] - exp_a) - (team_b['R32'] - exp_b)) * 0.20
         
-        # C. Injury Layering (Using your EXACT column names)
+        # C. Injury Layering (Using Injury Weight with a space)
         def get_injury_penalty(name):
             relevant = injuries_df[injuries_df['Team'] == name]
-            # Use 'Injury Weight' with the space!
-            return relevant['Injury Weight'].sum()
+            return pd.to_numeric(relevant['Injury Weight'], errors='coerce').sum()
 
         penalty_a = get_injury_penalty(team_a_name)
         penalty_b = get_injury_penalty(team_b_name)
         
-        # Apply Logic: Base + Upset Logic - Team A Injuries + Team B Injuries
+        # FINAL MATH: Base + Logic - Injuries
         final_prob_a = max(0.01, min(0.99, base_prob_a + modifier - penalty_a + penalty_b))
         final_prob_b = 1 - final_prob_a
 
         # --- 5. Display Results ---
         st.divider()
         
-       # Dynamic Injury Report
-        matchup_injuries = injuries_df[injuries_df['Team'].isin([team_a_name, team_b_name])]
-        if not matchup_injuries.empty:
-            st.warning("⚠️ **Injury Impact Detected:** Win probabilities have been adjusted.")
-            with st.expander("🔍 View Scouting & Injury Report"):
-                # Updated to use 'Pos' instead of 'Position' to match your CSV
-                st.table(matchup_injuries[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value']])
+        # Determine Underdog for the "Blue Section"
+        if team_a['Seed'] > team_b['Seed']:
+            underdog, u_prob = team_a_name, final_prob_a
+        elif team_b['Seed'] > team_a['Seed']:
+            underdog, u_prob = team_b_name, final_prob_b
+        else:
+            underdog, u_prob = None, 0
 
+        # Predicted Winner (Green Box)
         predicted_winner = team_a_name if final_prob_a > 0.5 else team_b_name
         win_p = final_prob_a if predicted_winner == team_a_name else final_prob_b
-        
         st.success(f"**Predicted Winner:** {predicted_winner} ({win_p*100:.1f}%)")
 
-# --- 6. Bracket Matchups (at bottom) ---
+        # THE BLUE SECTION (Upset Watch)
+        if underdog:
+            st.info(f"**Upset Watch:** {underdog} has a **{u_prob * 100:.1f}%** chance of pulling off the upset.")
+
+        # Injury Warning (Yellow Box)
+        matchup_injuries = injuries_df[injuries_df['Team'].isin([team_a_name, team_b_name])]
+        if not matchup_injuries.empty:
+            st.warning("⚠️ **Injury Impact Detected:** Win probabilities have been adjusted based on player availability.")
+            with st.expander("🔍 View Scouting & Injury Report"):
+                st.table(matchup_injuries[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value']]))
+
+        # --- 6. The Simulation Button ---
+        if st.button("🎲 Simulate Game Result", use_container_width=True):
+            roll = random.random() 
+            if roll < final_prob_a:
+                st.balloons()
+                st.subheader(f"🏆 {team_a_name} wins the simulation!")
+            else:
+                st.snow()
+                st.subheader(f"🏆 {team_b_name} wins the simulation!")
+            st.caption(f"Simulation based on a {final_prob_a*100:.1f}% vs {final_prob_b*100:.1f}% probability split.")
+
+# --- 7. Bracket Buttons (at bottom) ---
 st.divider()
 st.header("🏆 Round of 64 Matchups")
 regions = df['Region'].dropna().unique()
