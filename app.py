@@ -120,7 +120,7 @@ if team_a_name and team_b_name:
             st.info("Even matchup based on seeding. No technical upset possible.")
             
         # --- Verbal Breakdown of the Math ---
-        st.write("### How We Calculated This")
+        st.write("### How I Calculated This")
         st.markdown(f"""
         **1. Base Win Probability:**
         First, we look at their raw chances to reach the Round of 32. 
