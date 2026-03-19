@@ -118,14 +118,6 @@ if team_a_name and team_b_name:
                 st.caption("⚖️ *Seeding aligns perfectly with expected performance. No upset modifier applied.*")
         else:
             st.info("Even matchup based on seeding. No technical upset possible.")
-
-        # --- Visual Bar Chart ---
-        st.write("### Win Probability Breakdown")
-        chart_data = pd.DataFrame({
-            "Team": [team_a_name, team_b_name],
-            "Win Probability (%)": [final_prob_a * 100, final_prob_b * 100]
-        })
-        st.bar_chart(chart_data.set_index("Team"))
             
         # Show Behind the Math stats
         st.write("### Behind the Math")
