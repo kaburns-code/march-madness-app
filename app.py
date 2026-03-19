@@ -88,17 +88,6 @@ if team_a_name and team_b_name:
             st.info(f"**Upset Watch:** {underdog} has a **{upset_chance * 100:.1f}%** chance of pulling off the upset.")
         else:
             st.info("Even matchup based on seeding. No technical upset possible.")
-        # --- Visual Bar Chart ---
-        st.write("### Win Probability Breakdown")
-        
-        # Create a simple table holding the final percentages
-        chart_data = pd.DataFrame({
-            "Team": [team_a_name, team_b_name],
-            "Win Probability (%)": [final_prob_a * 100, final_prob_b * 100]
-        })
-        
-        # Set the 'Team' column as the index so Streamlit knows to use it for the bottom labels
-        st.bar_chart(chart_data.set_index("Team"))
             
         # Show the stats so you can verify the math is working as expected
         st.write("### Behind the Math")
