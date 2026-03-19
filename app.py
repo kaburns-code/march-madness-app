@@ -28,26 +28,12 @@ def set_matchup(team1, team2):
     st.session_state.scroll_to_top = True  # Tells the app to jump up!
 
 # --- The Scroll-to-Top Hack ---
-# --- The Scroll-to-Top Hack ---
-# --- The Scroll-to-Top Hack ---
 if st.session_state.scroll_to_top:
+    # This tells the browser to find the 'link_to_top' ID we created above
     components.html(
         """
         <script>
-            try {
-                // Try to scroll the main browser window
-                window.parent.scrollTo({top: 0, behavior: 'smooth'});
-                
-                // Hunt down Streamlit's specific internal scrolling containers
-                const containers = window.parent.document.querySelectorAll('[data-testid="stAppViewContainer"], .main, [data-testid="stAppViewBlockContainer"]');
-                
-                // Force all of them to scroll to the very top
-                containers.forEach(function(container) {
-                    container.scrollTo({top: 0, behavior: 'smooth'});
-                });
-            } catch (e) {
-                console.log("Scroll block caught by browser security.");
-            }
+            window.parent.location.hash = 'link_to_top';
         </script>
         """,
         height=0
@@ -57,6 +43,7 @@ if st.session_state.scroll_to_top:
 
 # --- 3. Build the Streamlit UI ---
 st.title("🏀 March Madness Upset Predictor")
+st.markdown("<div id='link_to_top'></div>", unsafe_allow_html=True)
 st.write("Select two teams to calculate win probabilities and upset potential!")
 
 col1, col2 = st.columns(2)
