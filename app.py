@@ -153,7 +153,7 @@ st.header("🏆 Round of 64 Matchups")
 # --- Display the visual bracket image ---
 # You can replace this URL with any image link of the current bracket!
 st.image(
-    "https://s.hdnux.com/photos/01/65/41/14/30806789/5/rawImage.jpg", 
+    "https://platform.sbnation.com/wp-content/uploads/sites/2/2026/03/Screenshot-2026-03-15-at-5.41.02%E2%80%AFPM.png?quality=90&strip=all&crop=0,0,100,100", 
     caption="The Tournament Bracket"
 )
 st.write("Click any matchup below to instantly load it into the predictor!")
