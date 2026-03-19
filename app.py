@@ -86,8 +86,6 @@ if team_a_name and team_b_name:
         with st.expander("🔍 See Player Details"):
             st.table(match_inj[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Injury Weight']])
 
-    st.bar_chart(pd.DataFrame({"Win %": [final_a*100, final_b*100]}, index=[team_a_name, team_b_name]))
-
 # --- 6. The Interactive Bracket ---
 st.divider()
 st.header("🏆 Round of 64 Grid")
