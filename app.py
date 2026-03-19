@@ -2,17 +2,24 @@ import streamlit as st
 import pandas as pd
 import streamlit.components.v1 as components
 
-# --- 1. Load and Clean the Data ---
+# --- 1. Load the Data ---
 @st.cache_data
 def load_data():
     df = pd.read_csv('data.csv')
-    # Convert R32 from whole numbers (e.g. 93.5) to decimals (0.935)
     df['R32'] = df['R32'] / 100
-    return df
+    
+    try:
+        # Pulling from your new injuries.csv
+        inj_df = pd.read_csv('injuries.csv')
+    except:
+        # Fallback if file isn't found
+        inj_df = pd.DataFrame(columns=['Player', 'Team', 'Position', 'Injury', 'Status', 'Value', 'Injury Weight'])
+    
+    return df, inj_df
 
-df = load_data()
+df, injuries_df = load_data()
 
-# --- 2. Session State (App Memory) ---
+# --- 2. Session State & Anchor Jump ---
 if 'team_a' not in st.session_state:
     st.session_state.team_a = df['Team'].sort_values().iloc[0]
 if 'team_b' not in st.session_state:
@@ -20,40 +27,27 @@ if 'team_b' not in st.session_state:
 if 'scroll_to_top' not in st.session_state:
     st.session_state.scroll_to_top = False
 
-# Function to update teams and trigger the jump
 def set_matchup(team1, team2):
     st.session_state.team_a = team1
     st.session_state.team_b = team2
     st.session_state.scroll_to_top = True
 
-# --- 3. The Anchor Jump (Visual Fix) ---
-# This invisible div is our "target" at the top of the page
 st.markdown("<div id='top'></div>", unsafe_allow_html=True)
-
 if st.session_state.scroll_to_top:
-    # This script tells the browser to navigate to the #top anchor
-    components.html(
-        """
-        <script>
-            window.parent.location.hash = 'top';
-        </script>
-        """,
-        height=0
-    )
+    components.html("<script>window.parent.location.hash = 'top';</script>", height=0)
     st.session_state.scroll_to_top = False
 
-# --- 4. Main UI ---
+# --- 3. UI Selectors ---
 st.title("🏀 March Madness Upset Predictor")
-st.write("Analyze matchups using efficiency metrics and custom upset logic.")
+st.write("Analyze matchups with live **Injury Impact** layering.")
 
 col1, col2 = st.columns(2)
-
 with col1:
     team_a_name = st.selectbox("Select Team A", df['Team'].sort_values(), key='team_a')
 with col2:
     team_b_name = st.selectbox("Select Team B", df['Team'].sort_values(), key='team_b')
 
-# --- 5. Prediction Logic ---
+# --- 4. Prediction Logic ---
 if team_a_name and team_b_name:
     if team_a_name == team_b_name:
         st.warning("Please select two different teams.")
@@ -61,67 +55,63 @@ if team_a_name and team_b_name:
         team_a = df[df['Team'] == team_a_name].iloc[0]
         team_b = df[df['Team'] == team_b_name].iloc[0]
         
-        # Base Probability (Head-to-Head R32 Ratio)
+        # A. Base Power Ratio
         total_r32 = team_a['R32'] + team_b['R32']
         base_prob_a = team_a['R32'] / total_r32 if total_r32 > 0 else 0.5
         
-        # Seeding Discrepancy
-        expected_r32_a = (17 - team_a['Seed']) / 16
-        expected_r32_b = (17 - team_b['Seed']) / 16
-        disc_a = team_a['R32'] - expected_r32_a
-        disc_b = team_b['R32'] - expected_r32_b
+        # B. Upset Modifier (Seed vs Performance)
+        exp_a = (17 - team_a['Seed']) / 16
+        exp_b = (17 - team_b['Seed']) / 16
+        modifier = ((team_a['R32'] - exp_a) - (team_b['R32'] - exp_b)) * 0.20
         
-        # Final Modifier
-        modifier = (disc_a - disc_b) * 0.20 
-        final_prob_a = max(0.01, min(0.99, base_prob_a + modifier))
+        # C. Injury Layering (Using your EXACT column names)
+        def get_injury_penalty(name):
+            relevant = injuries_df[injuries_df['Team'] == name]
+            # Use 'Injury Weight' with the space!
+            return relevant['Injury Weight'].sum()
+
+        penalty_a = get_injury_penalty(team_a_name)
+        penalty_b = get_injury_penalty(team_b_name)
+        
+        # Apply Logic: Base + Upset Logic - Team A Injuries + Team B Injuries
+        final_prob_a = max(0.01, min(0.99, base_prob_a + modifier - penalty_a + penalty_b))
         final_prob_b = 1 - final_prob_a
 
-        # --- 6. Results Display ---
+        # --- 5. Display Results ---
         st.divider()
+        
+        # Dynamic Injury Report
+        matchup_injuries = injuries_df[injuries_df['Team'].isin([team_a_name, team_b_name])]
+        if not matchup_injuries.empty:
+            st.warning("⚠️ **Injury Impact Detected:** Win probabilities have been adjusted.")
+            with st.expander("🔍 View Scouting & Injury Report"):
+                # Showing your new 'Position' and 'Injury' columns
+                st.table(matchup_injuries[['Player', 'Team', 'Position', 'Injury', 'Status', 'Value']])
+
         predicted_winner = team_a_name if final_prob_a > 0.5 else team_b_name
-        winner_prob = final_prob_a if predicted_winner == team_a_name else final_prob_b
+        win_p = final_prob_a if predicted_winner == team_a_name else final_prob_b
         
-        st.success(f"**Predicted Winner:** {predicted_winner} ({winner_prob * 100:.1f}%)")
-        
-        # Upset Context
-        if team_a['Seed'] != team_b['Seed']:
-            underdog = team_a_name if team_a['Seed'] > team_b['Seed'] else team_b_name
-            u_prob = final_prob_a if underdog == team_a_name else final_prob_b
-            st.info(f"**Upset Watch:** {underdog} has a **{u_prob * 100:.1f}%** chance of winning.")
-            
-            # Modifier Explanation
-            u_mod = modifier if underdog == team_a_name else -modifier
-            if u_mod > 0:
-                st.caption(f"🚨 Logic boosted {underdog} by {u_mod*100:.1f}% (Under-seeded/Over-performing).")
-            else:
-                st.caption(f"📉 Logic penalized {underdog} by {abs(u_mod)*100:.1f}% (Over-seeded/Under-performing).")
+        st.success(f"**Predicted Winner:** {predicted_winner} ({win_p*100:.1f}%)")
 
-        # Verbal Breakdown
-        with st.expander("📖 View Calculation Details"):
-            st.markdown(f"""
-            - **Base Power:** Based on R32 metrics, {team_a_name} starts with a **{base_prob_a*100:.1f}%** edge.
-            - **Seed Strength:** A {team_a['Seed']}-seed usually has a {expected_r32_a*100:.0f}% R32 chance. {team_a_name} is at {team_a['R32']*100:.1f}%.
-            - **Adjustment:** The 'Upset Factor' shifted the odds by **{modifier*100:+.1f}%** based on seed vs. performance.
-            """)
+        # Visual Probability Bar
+        chart_data = pd.DataFrame({
+            "Team": [team_a_name, team_b_name], 
+            "Win %": [final_prob_a*100, final_prob_b*100]
+        }).set_index("Team")
+        st.bar_chart(chart_data)
 
-# --- 7. Bracket & Matchups ---
+# --- 6. Bracket Matchups (at bottom) ---
 st.divider()
-st.header("🏆 Round of 64 Bracket")
-# Note: This is a placeholder bracket image. Update URL for the current year!
-st.image("https://sportshub.cbsistatic.com/i/r/2026/03/15/7e968c18-f3e4-42b9-93a0-0b7f617074e5/thumbnail/1200x675/c33e85c7427fb547d22006588b5caaea/march-madness-bracket-2026-men-border.jpg")
-
+st.header("🏆 Round of 64 Matchups")
 regions = df['Region'].dropna().unique()
 if len(regions) > 0:
     tabs = st.tabs([str(r) for r in regions])
     matchups = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
-    
     for i, region in enumerate(regions):
         with tabs[i]:
             region_df = df[df['Region'] == region]
             for s1, s2 in matchups:
-                t1 = region_df[region_df['Seed'] == s1]
-                t2 = region_df[region_df['Seed'] == s2]
+                t1, t2 = region_df[region_df['Seed'] == s1], region_df[region_df['Seed'] == s2]
                 if not t1.empty and not t2.empty:
-                    name1, name2 = t1.iloc[0]['Team'], t2.iloc[0]['Team']
-                    st.button(f"🏀 {s1} {name1} vs {s2} {name2}", key=f"btn_{region}_{s1}", 
-                              on_click=set_matchup, args=(name1, name2), use_container_width=True)
+                    n1, n2 = t1.iloc[0]['Team'], t2.iloc[0]['Team']
+                    st.button(f"🏀 {s1} {n1} vs {s2} {n2}", key=f"btn_{region}_{s1}", on_click=set_matchup, args=(n1, n2), use_container_width=True)
