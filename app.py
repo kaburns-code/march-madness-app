@@ -108,7 +108,7 @@ if team_a_name and team_b_name:
 st.divider()
 st.header("🏆 Round of 64 Bracket")
 # Note: This is a placeholder bracket image. Update URL for the current year!
-st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/March_Madness_Bracket.svg/1024px-March_Madness_Bracket.svg.png")
+st.image("https://sportshub.cbsistatic.com/i/r/2026/03/15/7e968c18-f3e4-42b9-93a0-0b7f617074e5/thumbnail/1200x675/c33e85c7427fb547d22006588b5caaea/march-madness-bracket-2026-men-border.jpg")
 
 regions = df['Region'].dropna().unique()
 if len(regions) > 0:
