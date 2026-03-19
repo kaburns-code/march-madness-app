@@ -142,7 +142,14 @@ if len(regions) > 0:
                     name_low = team_low.iloc[0]['Team']
                     
                     # Display the matchup in a clean, readable format
-                    st.markdown(f"**{high_seed}** {name_high}  vs.  **{low_seed}** {name_low}")
+                    # Create a clickable button for each matchup
+                    st.button(
+                        f"🏀 {high_seed} {name_high} vs. {low_seed} {name_low}", 
+                        key=f"{region}_{high_seed}", # A unique ID for each button
+                        on_click=set_matchup,        # The function to run when clicked
+                        args=(name_high, name_low),  # The teams to send to the dropdowns
+                        use_container_width=True     # Makes the buttons wide and uniform
+                    )
                 else:
                     # If a team is missing (like a play-in game), show a placeholder
                     st.markdown(f"**{high_seed}** TBD  vs.  **{low_seed}** TBD")
