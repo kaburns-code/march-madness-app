@@ -119,6 +119,24 @@ if team_a_name and team_b_name:
         else:
             st.info("Even matchup based on seeding. No technical upset possible.")
             
+        # --- Verbal Breakdown of the Math ---
+        st.write("### How We Calculated This")
+        st.markdown(f"""
+        **1. Base Win Probability:**
+        First, we look at their raw chances to reach the Round of 32. 
+        *{team_a_name}* has a {team_a['R32']*100:.1f}% chance, and *{team_b_name}* has a {team_b['R32']*100:.1f}% chance. 
+        Head-to-head, this gives *{team_a_name}* a baseline win probability of **{base_prob_a * 100:.1f}%**.
+
+        **2. Seeding Discrepancy (The Upset Factor):**
+        A typical {team_a['Seed']}-seed expects a {expected_r32_a*100:.1f}% chance to advance, meaning *{team_a_name}* is performing at a **{disc_a * 100:+.1f}%** difference compared to historical expectations. 
+        *{team_b_name}* (a {team_b['Seed']}-seed) is performing at a **{disc_b * 100:+.1f}%** difference.
+
+        **3. The Final Formula:**
+        We compare these two discrepancies to see who is relatively "hotter" and apply our upset weight. This generates a modifier of **{modifier * 100:+.1f}%**. 
+        We add this modifier to the base probability ({base_prob_a * 100:.1f}% {modifier * 100:+.1f}%) to get *{team_a_name}*'s true win probability of **{final_prob_a * 100:.1f}%**. 
+        Because one team must win, *{team_b_name}*'s chance is exactly the remaining percentage (**{final_prob_b * 100:.1f}%**).
+        """)
+            
         # Show Behind the Math stats
         st.write("### Behind the Math")
         stats_df = pd.DataFrame({
