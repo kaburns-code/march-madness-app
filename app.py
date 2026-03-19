@@ -85,8 +85,6 @@ if team_a_name and team_b_name:
         with st.expander("🔍 View Player Availability Details"):
             st.table(match_inj[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value']])
 
-    st.bar_chart(pd.DataFrame({"Win %": [final_a*100, final_b*100]}, index=[team_a_name, team_b_name]))
-
     if st.button("🎲 Simulate Game Result", use_container_width=True):
         if random.random() < final_a:
             st.balloons()
