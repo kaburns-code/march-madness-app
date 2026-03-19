@@ -29,19 +29,25 @@ def set_matchup(team1, team2):
 
 # --- The Scroll-to-Top Hack ---
 # --- The Scroll-to-Top Hack ---
+# --- The Scroll-to-Top Hack ---
 if st.session_state.scroll_to_top:
     components.html(
         """
         <script>
-            // Hunt down Streamlit's specific scrolling containers
-            const streamlitDoc = window.parent.document;
-            const mainContainer = streamlitDoc.querySelector('.main');
-            
-            // Force both the main container and the parent window to the very top smoothly
-            if (mainContainer) {
-                mainContainer.scrollTo({top: 0, behavior: 'smooth'});
+            try {
+                // Try to scroll the main browser window
+                window.parent.scrollTo({top: 0, behavior: 'smooth'});
+                
+                // Hunt down Streamlit's specific internal scrolling containers
+                const containers = window.parent.document.querySelectorAll('[data-testid="stAppViewContainer"], .main, [data-testid="stAppViewBlockContainer"]');
+                
+                // Force all of them to scroll to the very top
+                containers.forEach(function(container) {
+                    container.scrollTo({top: 0, behavior: 'smooth'});
+                });
+            } catch (e) {
+                console.log("Scroll block caught by browser security.");
             }
-            window.parent.scrollTo({top: 0, behavior: 'smooth'});
         </script>
         """,
         height=0
