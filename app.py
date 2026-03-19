@@ -153,7 +153,7 @@ st.header("🏆 Round of 64 Matchups")
 # --- Display the visual bracket image ---
 # You can replace this URL with any image link of the current bracket!
 st.image(
-    "https://platform.sbnation.com/wp-content/uploads/sites/2/2026/03/Screenshot-2026-03-15-at-5.41.02%E2%80%AFPM.png?quality=90&strip=all&crop=0,0,100,100", 
+    "https://sportshub.cbsistatic.com/i/r/2026/03/15/7e968c18-f3e4-42b9-93a0-0b7f617074e5/thumbnail/1200x675/c33e85c7427fb547d22006588b5caaea/march-madness-bracket-2026-men-border.jpg", 
     caption="The Tournament Bracket"
 )
 st.write("Click any matchup below to instantly load it into the predictor!")
