@@ -70,6 +70,14 @@ if team_a_name and team_b_name:
     winner = team_a_name if final_a > 0.5 else team_b_name
     win_pct = max(final_a, final_b) * 100
     st.success(f"**Projected Winner:** {winner} ({win_pct:.1f}%)")
+    # --- 😈 The "Iowa vs Clemson" Spite Logic ---
+    # Checks if the matchup is specifically Iowa vs Clemson
+    spite_teams = {team_a_name, team_b_name}
+    if "Iowa" in spite_teams and "Clemson" in spite_teams:
+        # If the user is projecting Iowa to win
+        if winner == "Iowa":
+            st.write("## 🖕") 
+            st.toast(" Clemson fans didn't like that.")
 
     # BLUE BOX: UPSET WATCH (Restored!)
     if t_a['Seed'] != t_b['Seed']:
