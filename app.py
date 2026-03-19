@@ -12,34 +12,35 @@ def load_data():
     # Load and Clean Injury Data
     try:
         inj_df = pd.read_csv('injuries.csv')
-        # This line ensures "Injury Weight" is a number so the math works
+        # Ensure "Injury Weight" is a number for the math to work
         inj_df['Injury Weight'] = pd.to_numeric(inj_df['Injury Weight'], errors='coerce').fillna(0)
     except:
-        # Fallback if the file is missing or broken
+        # Fallback if the file is missing
         inj_df = pd.DataFrame(columns=['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value', 'Injury Weight'])
     
     return df, inj_df
 
 df, injuries_df = load_data()
 
-# --- 2. Session State (Tournament Memory) ---
-if 'team_a' not in st.session_state:
-    st.session_state.team_a = df['Team'].sort_values().iloc[0]
-if 'team_b' not in st.session_state:
-    st.session_state.team_b = df['Team'].sort_values().iloc[1]
+# --- 2. Session State Management ---
+# Initialize the dropdown selections
+if 'team_a_select' not in st.session_state:
+    st.session_state.team_a_select = df['Team'].sort_values().iloc[0]
+if 'team_b_select' not in st.session_state:
+    st.session_state.team_b_select = df['Team'].sort_values().iloc[1]
+
+# Initialize the bracket memory
 if 'bracket_winners' not in st.session_state:
     st.session_state.bracket_winners = {}
 
-# FIXED: set_matchup no longer uses the broken set_query_params
+# Callback functions (No st.rerun needed here)
 def set_matchup(team1, team2):
-    st.session_state.team_a = team1
-    st.session_state.team_b = team2
-    # Triggers a rerun to show the new teams at the top
-    st.rerun()
+    st.session_state.team_a_select = team1
+    st.session_state.team_b_select = team2
 
 def advance_team(team_name, slot_id):
     st.session_state.bracket_winners[slot_id] = team_name
-    st.toast(f"🚩 {team_name} moved to Round of 32!")
+    st.toast(f"🚩 {team_name} advanced to Round of 32!")
 
 # --- 3. Main Predictor UI ---
 st.title("🏀 Tournament Master 2026")
@@ -51,14 +52,10 @@ with col1:
 with col2:
     team_b_name = st.selectbox("Team B", df['Team'].sort_values(), key='team_b_select')
 
-# Update state if user manually changes the dropdowns
-st.session_state.team_a = team_a_name
-st.session_state.team_b = team_b_name
-
 # --- 4. The Logic Engine ---
-if st.session_state.team_a and st.session_state.team_b:
-    t_a = df[df['Team'] == st.session_state.team_a].iloc[0]
-    t_b = df[df['Team'] == st.session_state.team_b].iloc[0]
+if team_a_name and team_b_name:
+    t_a = df[df['Team'] == team_a_name].iloc[0]
+    t_b = df[df['Team'] == team_b_name].iloc[0]
     
     # A. Base Stats Math
     total_power = t_a['R32'] + t_b['R32']
@@ -67,9 +64,9 @@ if st.session_state.team_a and st.session_state.team_b:
     # B. Seeding Bias Logic
     mod = (((t_a['R32'] - (17-t_a['Seed'])/16)) - ((t_b['R32'] - (17-t_b['Seed'])/16))) * 0.20
     
-    # C. RESTORED INJURY MATH
-    pen_a = injuries_df[injuries_df['Team'] == st.session_state.team_a]['Injury Weight'].sum()
-    pen_b = injuries_df[injuries_df['Team'] == st.session_state.team_b]['Injury Weight'].sum()
+    # C. Injury Math (Sums up weights from injuries.csv)
+    pen_a = injuries_df[injuries_df['Team'] == team_a_name]['Injury Weight'].sum()
+    pen_b = injuries_df[injuries_df['Team'] == team_b_name]['Injury Weight'].sum()
     
     # Calculation: Base + Mod - (Injuries for A) + (Injuries for B)
     final_a = max(0.01, min(0.99, base_prob + mod - pen_a + pen_b))
@@ -79,30 +76,32 @@ if st.session_state.team_a and st.session_state.team_b:
     st.divider()
     
     # Winner Box
-    winner = st.session_state.team_a if final_a > 0.5 else st.session_state.team_b
+    winner = team_a_name if final_a > 0.5 else team_b_name
     win_pct = max(final_a, final_b) * 100
     st.success(f"**Projected Winner:** {winner} ({win_pct:.1f}%)")
 
     # Blue Section: Upset Watch
     if t_a['Seed'] != t_b['Seed']:
-        dog = st.session_state.team_a if t_a['Seed'] > t_b['Seed'] else st.session_state.team_b
-        dog_pct = final_a if dog == st.session_state.team_a else final_b
+        dog = team_a_name if t_a['Seed'] > t_b['Seed'] else team_b_name
+        dog_pct = final_a if dog == team_a_name else final_b
         st.info(f"**Upset Watch:** {dog} has a **{dog_pct*100:.1f}%** chance to win.")
 
-    # Yellow Section: Injury Report
-    match_inj = injuries_df[injuries_df['Team'].isin([st.session_state.team_a, st.session_state.team_b])]
+    # Scouting & Injury Report Box
+    match_inj = injuries_df[injuries_df['Team'].isin([team_a_name, team_b_name])]
     if not match_inj.empty:
-        st.warning("⚠️ **Active Injury Report for this Matchup:**")
-        with st.expander("🔍 See Impact Details"):
+        st.warning("⚠️ **Active Scouting & Injury Report:**")
+        with st.expander("🔍 View Player Availability Impact"):
             st.table(match_inj[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Injury Weight']])
+
+    st.bar_chart(pd.DataFrame({"Win %": [final_a*100, final_b*100]}, index=[team_a_name, team_b_name]))
 
     if st.button("🎲 Simulate Game Result", use_container_width=True):
         if random.random() < final_a:
             st.balloons()
-            st.subheader(f"🏆 {st.session_state.team_a} wins the simulation!")
+            st.subheader(f"🏆 {team_a_name} wins the simulation!")
         else:
             st.snow()
-            st.subheader(f"🏆 {st.session_state.team_b} wins the simulation!")
+            st.subheader(f"🏆 {team_b_name} wins the simulation!")
 
 # --- 6. Round of 64 Grid ---
 st.divider()
@@ -136,6 +135,6 @@ for r in regions:
             w1 = st.session_state.bracket_winners.get(f"{r}_{p}_{s_nums[0]}")
             w2 = st.session_state.bracket_winners.get(f"{r}_{p}_{s_nums[1]}")
             if w1 and w2:
-                st.button(f"🔥 Analyze: {w1} vs {w2}", key=f"r32_{r}_{p}", on_click=set_matchup, args=(w1, w2), use_container_width=True)
+                st.button(f"🔥 Analyze R32: {w1} vs {w2}", key=f"r32_{r}_{p}", on_click=set_matchup, args=(w1, w2), use_container_width=True)
             else:
                 st.caption(f"Pod {p}: Waiting for Round of 64 winners...")
