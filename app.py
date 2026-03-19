@@ -23,8 +23,6 @@ if 'team_b' not in st.session_state:
     st.session_state.team_b = df['Team'].sort_values().iloc[1]
 if 'scroll_to_top' not in st.session_state:
     st.session_state.scroll_to_top = False
-
-# This stores who won each specific slot (e.g., 'South_Pod_1' stores the winner of 1vs16)
 if 'bracket_winners' not in st.session_state:
     st.session_state.bracket_winners = {}
 
@@ -44,7 +42,7 @@ if st.session_state.scroll_to_top:
     st.session_state.scroll_to_top = False
 
 # --- 4. Main Predictor UI ---
-st.title("🏀 March Madness Tournament Master")
+st.title("🏀 Tournament Master")
 col1, col2 = st.columns(2)
 with col1:
     team_a_name = st.selectbox("Team A", df['Team'].sort_values(), key='team_a')
@@ -56,44 +54,38 @@ if team_a_name and team_b_name:
     team_a = df[df['Team'] == team_a_name].iloc[0]
     team_b = df[df['Team'] == team_b_name].iloc[0]
     
-    # Math: Base + Seed Modifier - Injuries
     total_r32 = team_a['R32'] + team_b['R32']
     base_prob_a = team_a['R32'] / total_r32 if total_r32 > 0 else 0.5
-    modifier = (((team_a['R32'] - (17-team_a['Seed'])/16)) - ((team_b['R32'] - (17-team_b['Seed'])/16))) * 0.20
+    
+    exp_a = (17 - team_a['Seed']) / 16
+    exp_b = (17 - team_b['Seed']) / 16
+    modifier = ((team_a['R32'] - exp_a) - (team_b['R32'] - exp_b)) * 0.20
     
     def get_penalty(name):
-        return pd.to_numeric(injuries_df[injuries_df['Team'] == name]['Injury Weight'], errors='coerce').sum()
+        relevant = injuries_df[injuries_df['Team'] == name]
+        return pd.to_numeric(relevant['Injury Weight'], errors='coerce').sum()
 
     final_prob_a = max(0.01, min(0.99, base_prob_a + modifier - get_penalty(team_a_name) + get_penalty(team_b_name)))
     final_prob_b = 1 - final_prob_a
     
-    # Display Result
     st.divider()
     pred_winner = team_a_name if final_prob_a > 0.5 else team_b_name
     st.success(f"**Predicted Winner:** {pred_winner} ({max(final_prob_a, final_prob_b)*100:.1f}%)")
     
-    # Upset Watch
     if team_a['Seed'] != team_b['Seed']:
         underdog = team_a_name if team_a['Seed'] > team_b['Seed'] else team_b_name
         u_p = final_prob_a if underdog == team_a_name else final_prob_b
         st.info(f"**Upset Watch:** {underdog} has a **{u_p*100:.1f}%** chance.")
 
-    # Injury Report
-    match_inj = injuries_df[injuries_df['Team'].isin([team_a_name, team_b_name])]
-    if not match_inj.empty:
-        with st.expander("🚨 Injury Report"):
-            st.table(match_inj[['Player', 'Team', 'Pos', 'Status']])
+    # Visual Probability Bar
+    chart_data = pd.DataFrame({"Team": [team_a_name, team_b_name], "Win %": [final_prob_a*100, final_prob_b*100]}).set_index("Team")
+    st.bar_chart(chart_data)
 
-    # Advance Button
-    if st.button(f"🚩 Advance {pred_winner} to Next Round", use_container_width=True):
-        st.balloons()
-    
 # --- 6. Round of 64 Grid ---
 st.divider()
 st.header("🏆 Round of 64")
 regions = df['Region'].dropna().unique()
 tabs = st.tabs([str(r) for r in regions])
-# Standard Pod Pairings: (1v16 & 8v9), (5v12 & 4v13), (6v11 & 3v14), (7v10 & 2v15)
 matchups = [
     (1, 16, "Pod_A"), (8, 9, "Pod_A"),
     (5, 12, "Pod_B"), (4, 13, "Pod_B"),
@@ -105,31 +97,45 @@ for i, region in enumerate(regions):
     with tabs[i]:
         reg_df = df[df['Region'] == region]
         for s1, s2, pod in matchups:
-            t1, t2 = reg_df[reg_df['Seed'] == s1], reg_df[region_df['Seed'] == s2]
+            # FIX: Both now use reg_df correctly
+            t1 = reg_df[reg_df['Seed'] == s1]
+            t2 = reg_df[reg_df['Seed'] == s2]
+            
             if not t1.empty and not t2.empty:
                 n1, n2 = t1.iloc[0]['Team'], t2.iloc[0]['Team']
-                col_btn, col_adv = st.columns([3, 1])
-                with col_btn:
+                c_btn, c_adv = st.columns([3, 1])
+                with c_btn:
                     st.button(f"🏀 {s1} {n1} vs {s2} {n2}", key=f"bt_{region}_{s1}", on_click=set_matchup, args=(n1, n2), use_container_width=True)
-                with col_adv:
-                    # Let the user pick who they think won to advance them
+                with c_adv:
                     winner_pick = st.selectbox("Winner", [n1, n2], key=f"sel_{region}_{s1}", label_visibility="collapsed")
                     if st.button("➕", key=f"adv_{region}_{s1}"):
-                        advance_team(winner_pick, f"{region}_{pod}_{s1}_{s2}")
+                        advance_team(winner_pick, f"{region}_{pod}_{s1}")
 
-# --- 7. Round of 32 Logic ---
+# --- 7. Round of 32 Pods ---
 st.divider()
-st.header("🧬 Round of 32 Pods")
-st.write("Advance teams above to auto-populate these matchups!")
-
+st.header("🧬 Your Custom Round of 32")
 for region in regions:
     with st.expander(f"Region: {region}"):
-        # Check Pod A: Winner of (1v16) vs Winner of (8v9)
-        win_1_16 = st.session_state.bracket_winners.get(f"{region}_Pod_A_1_16")
-        win_8_9 = st.session_state.bracket_winners.get(f"{region}_Pod_A_8_9")
+        # Check Pod A (1/16 winner vs 8/9 winner)
+        w1 = st.session_state.bracket_winners.get(f"{region}_Pod_A_1")
+        w8 = st.session_state.bracket_winners.get(f"{region}_Pod_A_8")
+        if w1 and w8:
+            st.button(f"🔥 Analyze: {w1} vs {w8}", key=f"r32_{region}_A", on_click=set_matchup, args=(w1, w8))
         
-        if win_1_16 and win_8_9:
-            st.subheader(f"🔥 Matchup: {win_1_16} vs {win_8_9}")
-            st.button(f"Analyze {win_1_16} vs {win_8_9}", key=f"r32_{region}_A", on_click=set_matchup, args=(win_1_16, win_8_9))
-        else:
-            st.caption("Waiting for winners from Pod A (1/16 and 8/9)...")
+        # Check Pod B (5/12 winner vs 4/13 winner)
+        w5 = st.session_state.bracket_winners.get(f"{region}_Pod_B_5")
+        w4 = st.session_state.bracket_winners.get(f"{region}_Pod_B_4")
+        if w5 and w4:
+            st.button(f"🔥 Analyze: {w5} vs {w4}", key=f"r32_{region}_B", on_click=set_matchup, args=(w5, w4))
+            
+        # Check Pod C (6/11 winner vs 3/14 winner)
+        w6 = st.session_state.bracket_winners.get(f"{region}_Pod_C_6")
+        w3 = st.session_state.bracket_winners.get(f"{region}_Pod_C_3")
+        if w6 and w3:
+            st.button(f"🔥 Analyze: {w6} vs {w3}", key=f"r32_{region}_C", on_click=set_matchup, args=(w6, w3))
+
+        # Check Pod D (7/10 winner vs 2/15 winner)
+        w7 = st.session_state.bracket_winners.get(f"{region}_Pod_D_7")
+        w2 = st.session_state.bracket_winners.get(f"{region}_Pod_D_2")
+        if w7 and w2:
+            st.button(f"🔥 Analyze: {w7} vs {w2}", key=f"r32_{region}_D", on_click=set_matchup, args=(w7, w2))
