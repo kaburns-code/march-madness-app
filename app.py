@@ -28,11 +28,20 @@ def set_matchup(team1, team2):
     st.session_state.scroll_to_top = True  # Tells the app to jump up!
 
 # --- The Scroll-to-Top Hack ---
+# --- The Scroll-to-Top Hack ---
 if st.session_state.scroll_to_top:
     components.html(
         """
         <script>
-            window.parent.scrollTo(0, 0);
+            // Hunt down Streamlit's specific scrolling containers
+            const streamlitDoc = window.parent.document;
+            const mainContainer = streamlitDoc.querySelector('.main');
+            
+            // Force both the main container and the parent window to the very top smoothly
+            if (mainContainer) {
+                mainContainer.scrollTo({top: 0, behavior: 'smooth'});
+            }
+            window.parent.scrollTo({top: 0, behavior: 'smooth'});
         </script>
         """,
         height=0
