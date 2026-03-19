@@ -150,6 +150,12 @@ if team_a_name and team_b_name:
 # --- 6. Visualizing the Round of 64 Matchups ---
 st.divider()
 st.header("🏆 Round of 64 Matchups")
+# --- Display the visual bracket image ---
+# You can replace this URL with any image link of the current bracket!
+st.image(
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/March_Madness_Bracket.svg/1024px-March_Madness_Bracket.svg.png", 
+    caption="The Tournament Bracket"
+)
 st.write("Click any matchup below to instantly load it into the predictor!")
 
 regions = df['Region'].dropna().unique()
