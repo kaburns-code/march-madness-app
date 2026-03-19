@@ -9,7 +9,7 @@ def load_data():
     df['R32'] = df['R32'] / 100
     try:
         inj_df = pd.read_csv('injuries.csv')
-        # Ensure "Injury Weight" is treated as a number for the math
+        # Math-only: Ensure Injury Weight is a number
         inj_df['Injury Weight'] = pd.to_numeric(inj_df['Injury Weight'], errors='coerce').fillna(0)
     except:
         inj_df = pd.DataFrame(columns=['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value', 'Injury Weight'])
@@ -35,7 +35,7 @@ def advance_team(team_name, slot_id):
 
 # --- 3. Main Predictor UI ---
 st.title("🏀 Tournament Master 2026")
-st.write("Calculates odds using **2026 Season Stats** + **Active Injury Reports**.")
+st.write("Odds calculated using **Season Stats** + **Hidden Injury Weighting**.")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -43,48 +43,46 @@ with col1:
 with col2:
     team_b_name = st.selectbox("Team B", df['Team'].sort_values(), key='team_b_select')
 
-# --- 4. The Logic Engine (INCLUDES INJURY WEIGHT MATH) ---
+# --- 4. The Logic Engine (Injury Weight Math remains active) ---
 if team_a_name and team_b_name:
     t_a = df[df['Team'] == team_a_name].iloc[0]
     t_b = df[df['Team'] == team_b_name].iloc[0]
     
-    # A. Base Stats Math
+    # Base Stats Math
     total_power = t_a['R32'] + t_b['R32']
     base_prob = t_a['R32'] / total_power if total_power > 0 else 0.5
     
-    # B. Seeding Bias Logic
+    # Seeding Bias Logic
     mod = (((t_a['R32'] - (17-t_a['Seed'])/16)) - ((t_b['R32'] - (17-t_b['Seed'])/16))) * 0.20
     
-    # C. RESTORED INJURY MATH
-    # We look up every injury for Team A and Team B and sum the weights
+    # Injury Math (Calculation stays, but column won't show in table)
     pen_a = injuries_df[injuries_df['Team'] == team_a_name]['Injury Weight'].sum()
     pen_b = injuries_df[injuries_df['Team'] == team_b_name]['Injury Weight'].sum()
     
-    # FINAL CALCULATION: Stats + Seeds - Team A Injuries + Team B Injuries
+    # FINAL CALCULATION
     final_a = max(0.01, min(0.99, base_prob + mod - pen_a + pen_b))
     final_b = 1 - final_a
 
     # --- 5. Results Display ---
     st.divider()
     
-    # Projected Winner Success Box
     winner = team_a_name if final_a > 0.5 else team_b_name
     win_pct = max(final_a, final_b) * 100
     st.success(f"**Projected Winner:** {winner} ({win_pct:.1f}%)")
 
-    # Blue Section: Upset Watch (Restored)
+    # Upset Watch
     if t_a['Seed'] != t_b['Seed']:
         dog = team_a_name if t_a['Seed'] > t_b['Seed'] else team_b_name
         dog_pct = final_a if dog == team_a_name else final_b
         st.info(f"**Upset Watch:** {dog} has a **{dog_pct*100:.1f}%** chance to win.")
 
-    # RESTORED: Scouting & Injury Report Display
+    # Scouting & Injury Report (Injury Weight column EXCLUDED from visual)
     match_inj = injuries_df[injuries_df['Team'].isin([team_a_name, team_b_name])]
     if not match_inj.empty:
         st.warning("⚠️ **Active Scouting & Injury Report:**")
-        with st.expander("🔍 View Player Availability Impact"):
-            # Uses your exact column names: Player, Team, Pos, Injury, Status, Value, Injury Weight
-            st.table(match_inj[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value', 'Injury Weight']])
+        with st.expander("🔍 View Player Availability Details"):
+            # We explicitly exclude 'Injury Weight' from this list
+            st.table(match_inj[['Player', 'Team', 'Pos', 'Injury', 'Status', 'Value']])
 
     if st.button("🎲 Simulate Game Result", use_container_width=True):
         if random.random() < final_a:
