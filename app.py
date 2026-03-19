@@ -98,3 +98,43 @@ if team_a_name and team_b_name:
             'Expected R32 %': [f"{expected_r32_a*100:.1f}%", f"{expected_r32_b*100:.1f}%"]
         })
         st.dataframe(stats_df)
+
+
+# --- 5. Visualizing the Round of 64 Matchups ---
+st.divider()
+st.header("🏆 Round of 64 Matchups")
+st.write("Here are the opening matchups based on your loaded bracket data:")
+
+# Get the unique regions from your CSV (e.g., South, East, Midwest, West)
+# We drop any empty ones just in case your CSV has blank rows
+regions = df['Region'].dropna().unique()
+
+if len(regions) > 0:
+    # Create interactive tabs for each region!
+    tabs = st.tabs([str(r) for r in regions])
+    
+    # The standard NCAA tournament pairings for the Round of 64
+    matchups = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
+    
+    for i, region in enumerate(regions):
+        with tabs[i]:
+            # Filter the dataframe to only show teams in this specific region
+            region_df = df[df['Region'] == region]
+            
+            # Loop through the standard pairings and print them out
+            for high_seed, low_seed in matchups:
+                team_high = region_df[region_df['Seed'] == high_seed]
+                team_low = region_df[region_df['Seed'] == low_seed]
+                
+                # Check to make sure both teams exist in your data before writing
+                if not team_high.empty and not team_low.empty:
+                    name_high = team_high.iloc[0]['Team']
+                    name_low = team_low.iloc[0]['Team']
+                    
+                    # Display the matchup in a clean, readable format
+                    st.markdown(f"**{high_seed}** {name_high}  vs.  **{low_seed}** {name_low}")
+                else:
+                    # If a team is missing (like a play-in game), show a placeholder
+                    st.markdown(f"**{high_seed}** TBD  vs.  **{low_seed}** TBD")
+else:
+    st.info("No region data found in the CSV.")
