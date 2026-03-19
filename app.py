@@ -23,10 +23,13 @@ if 'team_b_select' not in st.session_state:
     st.session_state.team_b_select = df['Team'].sort_values().iloc[1]
 if 'bracket_winners' not in st.session_state:
     st.session_state.bracket_winners = {}
+if 'active_region' not in st.session_state:
+    st.session_state.active_region = 0 # Default to the first tab (South)
 
-def set_matchup(team1, team2):
+def set_matchup(team1, team2, region_index):
     st.session_state.team_a_select = team1
     st.session_state.team_b_select = team2
+    st.session_state.active_region = region_index # Saves your spot!
 
 def advance_team(team_name, slot_id):
     st.session_state.bracket_winners[slot_id] = team_name
