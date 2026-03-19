@@ -95,4 +95,41 @@ regions = df['Region'].dropna().unique()
 tabs = st.tabs([str(r) for r in regions])
 # Standard Pod Pairings: (1v16 & 8v9), (5v12 & 4v13), (6v11 & 3v14), (7v10 & 2v15)
 matchups = [
-    (1, 16, "Pod_A"), (8
+    (1, 16, "Pod_A"), (8, 9, "Pod_A"),
+    (5, 12, "Pod_B"), (4, 13, "Pod_B"),
+    (6, 11, "Pod_C"), (3, 14, "Pod_C"),
+    (7, 10, "Pod_D"), (2, 15, "Pod_D")
+]
+
+for i, region in enumerate(regions):
+    with tabs[i]:
+        reg_df = df[df['Region'] == region]
+        for s1, s2, pod in matchups:
+            t1, t2 = reg_df[reg_df['Seed'] == s1], reg_df[region_df['Seed'] == s2]
+            if not t1.empty and not t2.empty:
+                n1, n2 = t1.iloc[0]['Team'], t2.iloc[0]['Team']
+                col_btn, col_adv = st.columns([3, 1])
+                with col_btn:
+                    st.button(f"🏀 {s1} {n1} vs {s2} {n2}", key=f"bt_{region}_{s1}", on_click=set_matchup, args=(n1, n2), use_container_width=True)
+                with col_adv:
+                    # Let the user pick who they think won to advance them
+                    winner_pick = st.selectbox("Winner", [n1, n2], key=f"sel_{region}_{s1}", label_visibility="collapsed")
+                    if st.button("➕", key=f"adv_{region}_{s1}"):
+                        advance_team(winner_pick, f"{region}_{pod}_{s1}_{s2}")
+
+# --- 7. Round of 32 Logic ---
+st.divider()
+st.header("🧬 Round of 32 Pods")
+st.write("Advance teams above to auto-populate these matchups!")
+
+for region in regions:
+    with st.expander(f"Region: {region}"):
+        # Check Pod A: Winner of (1v16) vs Winner of (8v9)
+        win_1_16 = st.session_state.bracket_winners.get(f"{region}_Pod_A_1_16")
+        win_8_9 = st.session_state.bracket_winners.get(f"{region}_Pod_A_8_9")
+        
+        if win_1_16 and win_8_9:
+            st.subheader(f"🔥 Matchup: {win_1_16} vs {win_8_9}")
+            st.button(f"Analyze {win_1_16} vs {win_8_9}", key=f"r32_{region}_A", on_click=set_matchup, args=(win_1_16, win_8_9))
+        else:
+            st.caption("Waiting for winners from Pod A (1/16 and 8/9)...")
