@@ -93,13 +93,6 @@ if team_a_name and team_b_name:
         
         st.success(f"**Predicted Winner:** {predicted_winner} ({win_p*100:.1f}%)")
 
-        # Visual Probability Bar
-        chart_data = pd.DataFrame({
-            "Team": [team_a_name, team_b_name], 
-            "Win %": [final_prob_a*100, final_prob_b*100]
-        }).set_index("Team")
-        st.bar_chart(chart_data)
-
 # --- 6. Bracket Matchups (at bottom) ---
 st.divider()
 st.header("🏆 Round of 64 Matchups")
