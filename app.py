@@ -20,6 +20,7 @@ if 'team_b' not in st.session_state:
 def set_matchup(team1, team2):
     st.session_state.team_a = team1
     st.session_state.team_b = team2
+    st.session_state.scroll_to_top = True  # Tells the app to jump up!
 
 # --- 2. Build the Streamlit UI ---
 st.title("🏀 March Madness Upset Predictor")
