@@ -123,7 +123,7 @@ if underdog != "Neither (Same Seed)":
                 st.caption(f"📉 *Upset logic actually penalized {underdog} by **{abs(underdog_modifier) * 100:.1f}%** because they are over-seeded.*")
             else:
                 st.caption("⚖️ *Seeding aligns perfectly with expected performance. No upset modifier applied.*")
-        else:
+else:
             st.info("Even matchup based on seeding. No technical upset possible.")
             
         # Show the stats so you can verify the math is working as expected
