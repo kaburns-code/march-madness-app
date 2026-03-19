@@ -9,6 +9,17 @@ def load_data():
     return df
 
 df = load_data()
+# --- Session State (App Memory) ---
+# Set default teams so the app doesn't start empty
+if 'team_a' not in st.session_state:
+    st.session_state.team_a = df['Team'].sort_values().iloc[0]
+if 'team_b' not in st.session_state:
+    st.session_state.team_b = df['Team'].sort_values().iloc[1]
+
+# This function updates the memory when a matchup button is clicked
+def set_matchup(team1, team2):
+    st.session_state.team_a = team1
+    st.session_state.team_b = team2
 
 # --- 2. Build the Streamlit UI ---
 st.title("🏀 March Madness Upset Predictor")
