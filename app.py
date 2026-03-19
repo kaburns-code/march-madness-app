@@ -122,4 +122,4 @@ for r in regions:
             w1 = st.session_state.bracket_winners.get(f"{r}_{p}_{s_nums[0]}")
             w2 = st.session_state.bracket_winners.get(f"{r}_{p}_{s_nums[1]}")
             if w1 and w2:
-                st.button(f"🔥 Analyze: {w1} vs {w2}", key=f"r32_{r}_{p}", on_click=set_matchup, args=(w1, w2
+                st.button(f"🔥 Analyze: {w1} vs {w2}", key=f"r32_{r}_{p}", on_click=set_matchup, args=(w1, w2), use_container_width=True)
