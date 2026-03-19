@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import streamlit.components.v1 as components
 
 # --- 1. Load the Data ---
 @st.cache_data
@@ -25,6 +26,20 @@ def set_matchup(team1, team2):
 # --- 2. Build the Streamlit UI ---
 st.title("🏀 March Madness Upset Predictor")
 st.write("Select two teams to calculate win probabilities and upset potential!")
+# --- The Scroll-to-Top Hack ---
+# If a button told the app to scroll, inject a tiny invisible script
+if st.session_state.get('scroll_to_top', False):
+    components.html(
+        """
+        <script>
+            // Forces the main window to scroll to the very top
+            window.parent.scrollTo(0, 0);
+        </script>
+        """,
+        height=0
+    )
+    # Immediately turn the flag off so it doesn't get stuck at the top
+    st.session_state.scroll_to_top = False
 
 col1, col2 = st.columns(2)
 
